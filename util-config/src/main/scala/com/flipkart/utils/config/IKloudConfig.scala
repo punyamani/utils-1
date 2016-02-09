@@ -17,6 +17,12 @@ trait IKloudConfig {
     appConfig = cfg
   }
 
+  def get[V](k: String): Option[V] = try {
+    Some(appConfig.getAnyRef(k).asInstanceOf[V])
+  } catch {
+    case _: ConfigException.Missing => None
+  }
+
   def getString(k: String): Option[String] = try {
     Some(appConfig.getString(k))
   } catch {
