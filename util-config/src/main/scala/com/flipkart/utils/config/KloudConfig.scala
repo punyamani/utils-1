@@ -64,11 +64,11 @@ class KloudConfig(configHost: String, configPort: Int)
         applyConfig(overlayConfigs(configs: _*))
       }
     } catch {
-      case uhe@(_: UnknownHostException | _: IOException | _: ConfigServiceException) =>
+      case uhe : ConfigServiceException if uhe.getCause.isInstanceOf[UnknownHostException]  =>
         if (NetworkUtils.getHostname.contains("local"))
           logger.warn(s"Offline Mode, Unable to reach $configHost")
         else
-          throw uhe;
+          throw uhe
       case e: Throwable =>
         throw e;
 
