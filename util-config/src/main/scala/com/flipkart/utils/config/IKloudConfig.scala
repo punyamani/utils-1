@@ -8,12 +8,12 @@ import org.slf4j.LoggerFactory
  */
 trait IKloudConfig {
 
-  private val logger = LoggerFactory.getLogger(classOf[IKloudConfig])
+  private val _logger = LoggerFactory.getLogger(getClass)
 
   private var appConfig: Config = ConfigFactory.empty()
 
   def applyConfig(cfg:Config): Unit = {
-    logger.info(s"Config Applied: $cfg")
+    _logger.info(s"Config Applied: $cfg")
     appConfig = cfg
   }
 

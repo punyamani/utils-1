@@ -16,7 +16,7 @@ import scala.collection.mutable
 class KloudConfig(configHost: String, configPort: Int)
                  (bucketIds: BucketIds) extends ConfigAccumulator with IKloudConfig {
 
-  val logger = LoggerFactory.getLogger(classOf[KloudConfig])
+  val logger = LoggerFactory.getLogger(getClass)
 
   var cfgClient: ConfigClient = null
 
@@ -31,7 +31,7 @@ class KloudConfig(configHost: String, configPort: Int)
 
       val bucket = cfgClient.getDynamicBucket(bucketId)
       bucketConfigs.put(bucketId, ConfigFactory.parseMap(bucket.getKeys))
-      logger.info(s"Fetched config for bucket: $bucketId [$bucket]")
+      logger.debug(s"Fetched config for bucket: $bucketId [$bucket]")
 
       bucket.addListener(new BucketUpdateListener() {
         override def updated(oldBucket: Bucket, newBucket: Bucket): Unit = {
@@ -43,9 +43,9 @@ class KloudConfig(configHost: String, configPort: Int)
           }
         }
 
-        override def connected(s: String): Unit = logger.debug(s"dynamic bucket $bucketId connected.")
+        override def connected(s: String): Unit = logger.info(s"dynamic bucket $bucketId connected.")
 
-        override def disconnected(s: String, e: Exception): Unit = logger.debug(s"dynamic bucket $bucketId dis-connected.")
+        override def disconnected(s: String, e: Exception): Unit = logger.error(s"dynamic bucket $bucketId dis-connected.")
 
         override def deleted(s: String): Unit = logger.info(s"dynamic bucket $bucketId deleted.")
       })
@@ -57,7 +57,7 @@ class KloudConfig(configHost: String, configPort: Int)
 
 
   def init() = {
-    logger.info("Config Init")
+    logger.info("KloudConfig Init")
     try {
       val configs = readConfigs()
       this.synchronized {
@@ -76,7 +76,7 @@ class KloudConfig(configHost: String, configPort: Int)
   }
 
   def terminate() = {
-    logger.info("Connekt config client terminating")
+    logger.info("ConfigService Client terminating")
     Option(cfgClient).foreach(_.shutdown())
   }
 
