@@ -1,27 +1,27 @@
 import sbt.Keys._
 import sbt._
 
-object Util extends Build {
-  	val branch = Process("git" :: "rev-parse" :: "--abbrev-ref" :: "HEAD" :: Nil).!!.trim
-  	val suffix = if (branch == "master") "" else "-SNAPSHOT"
-  
-  	val libVersion = "0.0.1" + suffix
+object Utils extends Build {
+  val branch = Process("git" :: "rev-parse" :: "--abbrev-ref" :: "HEAD" :: Nil).!!.trim
+  val suffix = if (branch == "master") "" else "-SNAPSHOT"
+
+  val libVersion = "0.0.1" + suffix
 
 
-	def scalacOptionsVersion(sv: String): Seq[String] = {
-	    Seq(
-	      // Note: Add -deprecation when deprecated methods are removed
-	      "-unchecked",
-	      "-feature",
-	      "-encoding", "utf8"
-	    ) ++ (CrossVersion.partialVersion(sv) match {
-	      // Needs -missing-interpolator due to https://issues.scala-lang.org/browse/SI-8761
-	      case Some((2, x)) if x >= 11 => Seq("-Xlint:-missing-interpolator")
-	      case _ => Seq("-Xlint")
-	    })
-  	}
+  def scalacOptionsVersion(sv: String): Seq[String] = {
+    Seq(
+      // Note: Add -deprecation when deprecated methods are removed
+      "-unchecked",
+      "-feature",
+      "-encoding", "utf8"
+    ) ++ (CrossVersion.partialVersion(sv) match {
+      // Needs -missing-interpolator due to https://issues.scala-lang.org/browse/SI-8761
+      case Some((2, x)) if x >= 11 => Seq("-Xlint:-missing-interpolator")
+      case _ => Seq("-Xlint")
+    })
+  }
 
-  	 val sharedSettings = Seq(
+  val sharedSettings = Seq(
     version := libVersion,
     organization := "com.flipkart",
     scalaVersion := "2.11.7",
@@ -34,7 +34,6 @@ object Util extends Build {
       "org.scalatest" %% "scalatest" % "2.2.4" % "test"
     ),
 
-   
     scalacOptions := scalacOptionsVersion(scalaVersion.value),
 
     // Note: Use -Xlint rather than -Xlint:unchecked when TestThriftStructure
@@ -53,52 +52,50 @@ object Util extends Build {
     apiURL := Some(url("https://github.com/Flipkart/utils")),
     pomExtra :=
       <url>https://github.com/Flipkart/utils</url>
-      <licenses>
-        <license>
-          <name>Apache License, Version 2.0</name>
-          <url>http://www.apache.org/licenses/LICENSE-2.0</url>
-        </license>
-      </licenses>
-      <scm>
-        <url>git@github.com:Flipkart/utils</url>
-        <connection>scm:git:git@github.com:Flipkart/utils</connection>
-      </scm>
-      <developers>
-        <developer>
-          <id>Flipkart</id>
-          <name>Flipkart Internet Pvt. Ltd.</name>
-          <url>https://www.flipkart.com/</url>
-        </developer>
-      </developers>,
+        <licenses>
+          <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+          </license>
+        </licenses>
+        <scm>
+          <url>git@github.com:Flipkart/utils</url>
+          <connection>scm:git:git@github.com:Flipkart/utils</connection>
+        </scm>
+        <developers>
+          <developer>
+            <id>Flipkart</id>
+            <name>Flipkart Internet Pvt. Ltd.</name>
+            <url>https://www.flipkart.com/</url>
+          </developer>
+        </developers>,
     publishTo <<= version { (v: String) =>
       val flipkart = "http://artifactory.nm.flipkart.com:8081/artifactory/"
-	  if (v.trim.endsWith("SNAPSHOT"))
-	    Some("Flipkart Repo Snapshots" at flipkart + "libs-snapshot-local")
-	  else
-	    Some("Flipkart Repo Releases"  at flipkart + "libs-release-local")
+      if (v.trim.endsWith("SNAPSHOT"))
+        Some("Flipkart Repo Snapshots" at flipkart + "libs-snapshot-local")
+      else
+        Some("Flipkart Repo Releases" at flipkart + "libs-release-local")
     }
-
-   
   )
 
 
-	lazy val util = Project(
+  lazy val util = Project(
     id = "utils",
     base = file("."),
     settings = Defaults.coreDefaultSettings ++
-      sharedSettings 
+      sharedSettings
   ) aggregate(
     utilCore, utilConfig
-  )
+    )
 
-lazy val utilCore = Project(
+  lazy val utilCore = Project(
     id = "util-core",
     base = file("util-core"),
     settings = Defaults.coreDefaultSettings ++
       sharedSettings
   ).settings(
-    name := "util-core"
-  )
+      name := "util-core"
+    )
 
   lazy val utilConfig = Project(
     id = "util-config",
@@ -106,7 +103,7 @@ lazy val utilCore = Project(
     settings = Defaults.coreDefaultSettings ++
       sharedSettings
   ).settings(
-    name := "util-config"
-  ).dependsOn(utilCore)
+      name := "util-config"
+    ).dependsOn(utilCore)
 
 }
