@@ -2,8 +2,9 @@ import sbt.Keys._
 import sbt._
 
 object Utils extends Build {
+
   val branch = Process("git" :: "rev-parse" :: "--abbrev-ref" :: "HEAD" :: Nil).!!.trim
-  val suffix = if (branch == "master") "" else "-SNAPSHOT"
+  val suffix = "-SNAPSHOT" // if (branch == "master") "" else "-SNAPSHOT" //Dev phase now! Pending release.
 
   val libVersion = "0.0.1" + suffix
 
@@ -104,6 +105,6 @@ object Utils extends Build {
       sharedSettings
   ).settings(
       name := "util-config"
-    ).dependsOn(utilCore)
+    ).dependsOn(utilCore  % "test->test;compile->compile")
 
 }
