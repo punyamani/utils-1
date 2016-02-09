@@ -23,6 +23,12 @@ trait IKloudConfig {
     case _: ConfigException.Missing => None
   }
 
+  def getOrElse[T](key: String, default: T) = try {
+    appConfig.getAnyRef(key).asInstanceOf[T]
+  } catch {
+    case e: ConfigException.Missing => default
+  }
+
   def getString(k: String): Option[String] = try {
     Some(appConfig.getString(k))
   } catch {
