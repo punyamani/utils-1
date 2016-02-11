@@ -86,7 +86,7 @@ object Utils extends Build {
     settings = Defaults.coreDefaultSettings ++
       sharedSettings
   ) aggregate(
-    utilCore, utilConfig
+    utilCore, utilConfig, utilHttp
     )
 
   lazy val utilCore = Project(
