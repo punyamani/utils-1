@@ -107,4 +107,14 @@ object Utils extends Build {
       name := "util-config"
     ).dependsOn(utilCore  % "test->test;compile->compile")
 
+
+  lazy val utilHttp = Project(
+    id = "util-http",
+    base = file("util-http"),
+    settings = Defaults.coreDefaultSettings ++
+      sharedSettings
+  ).settings(
+      name := "util-http"
+    ).dependsOn(utilCore  % "test->test;compile->compile")
+
 }
