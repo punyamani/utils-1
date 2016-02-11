@@ -38,7 +38,7 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
 
   val httpParams = RequestConfig.custom().setConnectTimeout(connectionTimeoutInMillis).setSocketTimeout(socketTimeoutInMillis).build()
 
-  def build(): HttpClient = {
+  def create(): HttpClient = {
     builder.setConnectionManager(cm)
     builder.setDefaultRequestConfig(httpParams)
     apacheHttpClient = builder.build()

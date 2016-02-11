@@ -115,6 +115,6 @@ object Utils extends Build {
       sharedSettings
   ).settings(
       name := "util-http"
-    ).dependsOn(utilCore  % "test->test;compile->compile")
+    )
 
 }
