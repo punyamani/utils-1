@@ -11,7 +11,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
-
+import collection.JavaConversions._
 
 class KloudConfig(configHost: String, configPort: Int)
                  (bucketIds: BucketIds) extends ConfigAccumulator with IKloudConfig {
@@ -21,36 +21,37 @@ class KloudConfig(configHost: String, configPort: Int)
   var cfgClient: ConfigClient = null
 
   /** BucketId -> Config */
-  val bucketConfigs = mutable.LinkedHashMap[String, Config]()
+  val bucketConfigs = new java.util.TreeMap[Int, Config]()
 
   private def readConfigs(): List[Config] = {
     cfgClient = new ConfigClient(configHost, configPort, 1, 30000)
     logger.info(s"Buckets to fetch config: [${bucketIds.toList}]")
 
-    bucketIds.foreach(bucketId => {
+    bucketIds.zipWithIndex.foreach {
+      case (bucketId, bucketPosition) =>
 
-      val bucket = cfgClient.getDynamicBucket(bucketId)
-      bucketConfigs.put(bucketId, ConfigFactory.parseMap(bucket.getKeys))
-      logger.debug(s"Fetched config for bucket: $bucketId [$bucket]")
+        val bucket = cfgClient.getDynamicBucket(bucketId)
+        bucketConfigs.put(bucketPosition, ConfigFactory.parseMap(bucket.getKeys))
+        logger.debug(s"Fetched config for bucket: [$bucketId], POS[$bucketPosition], Values : [$bucket]")
 
-      bucket.addListener(new BucketUpdateListener() {
-        override def updated(oldBucket: Bucket, newBucket: Bucket): Unit = {
-          logger.info(s"dynamic bucket $bucketId updated")
-          bucketConfigs.put(bucketId, ConfigFactory.parseMap(newBucket.getKeys))
+        bucket.addListener(new BucketUpdateListener() {
+          override def updated(oldBucket: Bucket, newBucket: Bucket): Unit = {
+            logger.info(s"Dynamic Bucket $bucketId Updated at POS[$bucketPosition]")
+            bucketConfigs.put(bucketPosition, ConfigFactory.parseMap(newBucket.getKeys))
 
-          this.synchronized {
-            applyConfig(overlayConfigs(bucketConfigs.values.toList: _*))
+            this.synchronized {
+              applyConfig(overlayConfigs(bucketConfigs.values.toSeq: _*))
+            }
           }
-        }
 
-        override def connected(s: String): Unit = logger.info(s"dynamic bucket $bucketId connected.")
+          override def connected(s: String): Unit = logger.info(s"Dynamic Bucket $bucketId connected.")
 
-        override def disconnected(s: String, e: Exception): Unit = logger.error(s"dynamic bucket $bucketId dis-connected.")
+          override def disconnected(s: String, e: Exception): Unit = logger.error(s"Dynamic Bucket $bucketId dis-connected.")
 
-        override def deleted(s: String): Unit = logger.info(s"dynamic bucket $bucketId deleted.")
-      })
+          override def deleted(s: String): Unit = logger.info(s"Dynamic Bucket $bucketId deleted.")
+        })
 
-    })
+    }
 
     bucketConfigs.values.toList
   }
@@ -64,7 +65,7 @@ class KloudConfig(configHost: String, configPort: Int)
         applyConfig(overlayConfigs(configs: _*))
       }
     } catch {
-      case uhe : ConfigServiceException if uhe.getCause.isInstanceOf[UnknownHostException]  =>
+      case uhe: ConfigServiceException if uhe.getCause.isInstanceOf[UnknownHostException] =>
         if (NetworkUtils.getHostname.contains("local"))
           logger.warn(s"Offline Mode, Unable to reach $configHost")
         else
