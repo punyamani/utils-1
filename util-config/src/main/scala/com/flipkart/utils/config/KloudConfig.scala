@@ -1,6 +1,5 @@
 package com.flipkart.utils.config
 
-import java.io.IOException
 import java.net.UnknownHostException
 
 import com.flipkart.kloud.config.error.ConfigServiceException
@@ -10,8 +9,7 @@ import com.flipkart.utils.config.KloudConfig.BucketIds
 import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable
-import collection.JavaConversions._
+import scala.collection.JavaConversions._
 
 class KloudConfig(configHost: String, configPort: Int)
                  (bucketIds: BucketIds) extends ConfigAccumulator with IKloudConfig {
