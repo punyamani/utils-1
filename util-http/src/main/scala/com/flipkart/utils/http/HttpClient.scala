@@ -8,6 +8,7 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.flipkart.utils.http.HttpClient.Header
 import com.flipkart.utils.http.metrics.MetricRegistry
 import com.sun.istack.internal.NotNull
+import org.apache.commons.io.IOUtils
 import org.apache.http.HttpResponse
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.{HttpGet, HttpPost, HttpPut, HttpRequestBase}
@@ -95,6 +96,10 @@ object HttpClient {
   implicit class UnMarshallFunctions(val response: HttpResponse) {
     def getObj[T: ClassTag] = {
       objMapper.readValue(response.getEntity.getContent, classTag[T].runtimeClass).asInstanceOf[T]
+    }
+
+    def getString(encoding: String = "UTF-8") = {
+      IOUtils.toString(response.getEntity.getContent, encoding)
     }
 
   }
