@@ -24,26 +24,19 @@ import scala.util.{Failure, Success, Try}
 
 class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnections: Int, @NotNull processQueueSize: Int, @NotNull connectionTimeoutInMillis: Integer, @NotNull socketTimeoutInMillis: Integer) {
 
-  val builder = HttpClientBuilder.create()
-  var apacheHttpClient: org.apache.http.client.HttpClient = _
-  var headers: List[Header] = List()
-  val processQueue = new Semaphore(processQueueSize + maxConnections)
+  protected var headers: List[Header] = List()
+  protected val processQueue = new Semaphore(processQueueSize + maxConnections)
 
-  def metrics(suffix: String) = MetricRegistry.registry.timer(com.codahale.metrics.MetricRegistry.name(getClass, s"$name.$suffix"))
-
-
-  val cm = new PoolingHttpClientConnectionManager(ttlInMillis, TimeUnit.MILLISECONDS)
-  cm.setMaxTotal(maxConnections)
-  cm.setDefaultMaxPerRoute(maxConnections)
+  val connectionManager = new PoolingHttpClientConnectionManager(ttlInMillis, TimeUnit.MILLISECONDS)
+  connectionManager.setMaxTotal(maxConnections)
+  connectionManager.setDefaultMaxPerRoute(maxConnections)
 
   val httpParams = RequestConfig.custom().setConnectTimeout(connectionTimeoutInMillis).setSocketTimeout(socketTimeoutInMillis).build()
 
-  def create(): HttpClient = {
-    builder.setConnectionManager(cm)
-    builder.setDefaultRequestConfig(httpParams)
-    apacheHttpClient = builder.build()
-    this
-  }
+  protected val apacheHttpClient = HttpClientBuilder.create()
+    .setConnectionManager(connectionManager).setDefaultRequestConfig(httpParams).build()
+
+  protected def metrics(suffix: String) = MetricRegistry.registry.timer(com.codahale.metrics.MetricRegistry.name(getClass, s"$name.$suffix"))
 
   def setDefaultHeaders(headers: Iterable[Header]): HttpClient = {
     this.headers = headers.toList
@@ -103,6 +96,7 @@ object HttpClient {
     def getObj[T: ClassTag] = {
       objMapper.readValue(response.getEntity.getContent, classTag[T].runtimeClass).asInstanceOf[T]
     }
+
   }
 
 }
