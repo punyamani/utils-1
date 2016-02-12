@@ -45,21 +45,21 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
 
   def doGet(url: String, headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpGet = new HttpGet(url)
-    this.headers.foreach(h => httpGet.addHeader(h._1, h._2))
+    headers.foreach(h => httpGet.addHeader(h._1, h._2))
     doExecute(httpGet)
   }
 
   def doPost(url: String, body: Array[Byte], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPost = new HttpPost(url)
     httpPost.setEntity(new ByteArrayEntity(body))
-    this.headers.foreach(h => httpPost.addHeader(h._1, h._2))
+    headers.foreach(h => httpPost.addHeader(h._1, h._2))
     doExecute(httpPost)
   }
 
   def doPut(url: String, body: Array[Byte], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPut = new HttpPut(url)
     httpPut.setEntity(new ByteArrayEntity(body))
-    this.headers.foreach(h => httpPut.addHeader(h._1, h._2))
+    headers.foreach(h => httpPut.addHeader(h._1, h._2))
     doExecute(httpPut)
   }
 
