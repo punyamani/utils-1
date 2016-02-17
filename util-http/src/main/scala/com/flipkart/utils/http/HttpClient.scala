@@ -11,7 +11,7 @@ import com.sun.istack.internal.NotNull
 import org.apache.commons.io.IOUtils
 import org.apache.http.HttpResponse
 import org.apache.http.client.config.RequestConfig
-import org.apache.http.client.methods.{HttpGet, HttpPost, HttpPut, HttpRequestBase}
+import org.apache.http.client.methods._
 import org.apache.http.entity.ByteArrayEntity
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
@@ -48,6 +48,12 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
     val httpGet = new HttpGet(url)
     headers.foreach(h => httpGet.addHeader(h._1, h._2))
     doExecute(httpGet)
+  }
+
+  def doDelete(url: String, headers: Iterable[Header] = List()): Try[HttpResponse] = {
+    val httpDelete = new HttpDelete(url)
+    headers.foreach(h => httpDelete.addHeader(h._1, h._2))
+    doExecute(httpDelete)
   }
 
   def doPost(url: String, body: Array[Byte], headers: Iterable[Header] = List()): Try[HttpResponse] = {
