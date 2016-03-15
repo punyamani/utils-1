@@ -67,6 +67,7 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
         case file : File => multipartEntityBuilder.addBinaryBody(row._1,file)
         case bytes : Array[Byte]  => multipartEntityBuilder.addBinaryBody(row._1,bytes)
         case is : InputStream => multipartEntityBuilder.addBinaryBody(row._1,is)
+        case rest : _ => multipartEntityBuilder.addTextBody(row._1,rest.toString)
       }
     }}
     val httpEntity = multipartEntityBuilder.build()
