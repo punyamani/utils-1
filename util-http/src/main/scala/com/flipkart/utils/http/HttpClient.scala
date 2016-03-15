@@ -1,5 +1,6 @@
 package com.flipkart.utils.http
 
+import java.io.{InputStream, File}
 import java.util.concurrent.{Semaphore, TimeUnit}
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -51,37 +52,43 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
   def doPost(url: String, body: Option[Array[Byte]], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPost = new HttpPost(url)
     if(body.isDefined)
-        httpPost.setEntity(new ByteArrayEntity(body.get))
+      httpPost.setEntity(new ByteArrayEntity(body.get))
     this.headers.foreach(h => httpPost.addHeader(h._1, h._2))
     headers.foreach(h => httpPost.addHeader(h._1, h._2))
     doExecute(httpPost)
   }
 
-  def doMultiPartPost(url: String, data : Map[String,String], headers: Iterable[Header] = List()): Try[HttpResponse] = {
+  def doMultiPartPost(url: String, data : Map[String,Any], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPost = new HttpPost(url)
     val multipartEntityBuilder = MultipartEntityBuilder.create()
-    data.foreach{ row => multipartEntityBuilder.addTextBody(row._1,row._2)}
+    data.foreach{ row => {
+      row._2  match {
+        case str : String => multipartEntityBuilder.addTextBody(row._1,str)
+        case file : File => multipartEntityBuilder.addBinaryBody(row._1,file)
+        case bytes : Array[Byte]  => multipartEntityBuilder.addBinaryBody(row._1,bytes)
+        case is : InputStream => multipartEntityBuilder.addBinaryBody(row._1,is)
+      }
+    }}
     val httpEntity = multipartEntityBuilder.build()
     httpPost.setEntity(httpEntity)
     this.headers.foreach(h => httpPost.addHeader(h._1, h._2))
     doExecute(httpPost)
   }
 
-
   def doPut(url: String, body: Option[Array[Byte]], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPut = new HttpPut(url)
     if(body.isDefined)
-        httpPut.setEntity(new ByteArrayEntity(body.get))
+      httpPut.setEntity(new ByteArrayEntity(body.get))
     this.headers.foreach(h => httpPut.addHeader(h._1, h._2))
     headers.foreach(h => httpPut.addHeader(h._1, h._2))
     doExecute(httpPut)
   }
 
-    def doDelete(url: String, headers: Iterable[Header] = List()): Try[HttpResponse] = {
-      val httpDelete = new HttpDelete(url)
-      headers.foreach(h => httpDelete.addHeader(h._1, h._2))
-      doExecute(httpDelete)
-    }
+  def doDelete(url: String, headers: Iterable[Header] = List()): Try[HttpResponse] = {
+    val httpDelete = new HttpDelete(url)
+    headers.foreach(h => httpDelete.addHeader(h._1, h._2))
+    doExecute(httpDelete)
+  }
 
   def doExecute(request: HttpRequestBase): Try[HttpResponse] = {
     this.headers.foreach(h => request.addHeader(h._1, h._2))
