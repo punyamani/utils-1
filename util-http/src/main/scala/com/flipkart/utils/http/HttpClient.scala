@@ -8,9 +8,10 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.flipkart.utils.http.HttpClient.Header
 import com.flipkart.utils.http.metrics.MetricRegistry
 import com.sun.istack.internal.NotNull
+import org.apache.commons.io.IOUtils
 import org.apache.http.HttpResponse
 import org.apache.http.client.config.RequestConfig
-import org.apache.http.client.methods.{HttpGet, HttpPost, HttpPut, HttpRequestBase}
+import org.apache.http.client.methods._
 import org.apache.http.entity.ByteArrayEntity
 import org.apache.http.entity.mime.MultipartEntityBuilder
 import org.apache.http.impl.client.HttpClientBuilder
@@ -19,11 +20,8 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import scala.reflect.{ClassTag, _}
 import scala.util.{Failure, Success, Try}
 
-/**
- * Created by kinshuk.bairagi on 11/02/16.
- */
-
-class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnections: Int, @NotNull processQueueSize: Int, @NotNull connectionTimeoutInMillis: Integer, @NotNull socketTimeoutInMillis: Integer) {
+class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnections: Int, @NotNull processQueueSize: Int,
+                 @NotNull connectionTimeoutInMillis: Integer, @NotNull socketTimeoutInMillis: Integer) {
 
   protected var headers: List[Header] = List()
   protected val processQueue = new Semaphore(processQueueSize + maxConnections)
@@ -46,7 +44,7 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
 
   def doGet(url: String, headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpGet = new HttpGet(url)
-    this.headers.foreach(h => httpGet.addHeader(h._1, h._2))
+    headers.foreach(h => httpGet.addHeader(h._1, h._2))
     doExecute(httpGet)
   }
 
@@ -55,6 +53,7 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
     if(body.isDefined)
         httpPost.setEntity(new ByteArrayEntity(body.get))
     this.headers.foreach(h => httpPost.addHeader(h._1, h._2))
+    headers.foreach(h => httpPost.addHeader(h._1, h._2))
     doExecute(httpPost)
   }
 
@@ -74,8 +73,15 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
     if(body.isDefined)
         httpPut.setEntity(new ByteArrayEntity(body.get))
     this.headers.foreach(h => httpPut.addHeader(h._1, h._2))
+    headers.foreach(h => httpPut.addHeader(h._1, h._2))
     doExecute(httpPut)
   }
+
+    def doDelete(url: String, headers: Iterable[Header] = List()): Try[HttpResponse] = {
+      val httpDelete = new HttpDelete(url)
+      headers.foreach(h => httpDelete.addHeader(h._1, h._2))
+      doExecute(httpDelete)
+    }
 
   def doExecute(request: HttpRequestBase): Try[HttpResponse] = {
     this.headers.foreach(h => request.addHeader(h._1, h._2))
@@ -94,10 +100,7 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
       Failure(new Exception("PROCESS_QUEUE_FULL"))
     }
   }
-
-
 }
-
 
 object HttpClient {
 
@@ -111,6 +114,8 @@ object HttpClient {
       objMapper.readValue(response.getEntity.getContent, classTag[T].runtimeClass).asInstanceOf[T]
     }
 
+    def getString(encoding: String = "UTF-8") = {
+      IOUtils.toString(response.getEntity.getContent, encoding)
+    }
   }
-
 }
