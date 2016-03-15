@@ -12,6 +12,7 @@ import org.apache.http.HttpResponse
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.{HttpGet, HttpPost, HttpPut, HttpRequestBase}
 import org.apache.http.entity.ByteArrayEntity
+import org.apache.http.entity.mime.MultipartEntityBuilder
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 
@@ -49,16 +50,29 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
     doExecute(httpGet)
   }
 
-  def doPost(url: String, body: Array[Byte], headers: Iterable[Header] = List()): Try[HttpResponse] = {
+  def doPost(url: String, body: Option[Array[Byte]], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPost = new HttpPost(url)
-    httpPost.setEntity(new ByteArrayEntity(body))
+    if(body.isDefined)
+        httpPost.setEntity(new ByteArrayEntity(body.get))
     this.headers.foreach(h => httpPost.addHeader(h._1, h._2))
     doExecute(httpPost)
   }
 
-  def doPut(url: String, body: Array[Byte], headers: Iterable[Header] = List()): Try[HttpResponse] = {
+  def doMultiPartPost(url: String, data : Map[String,String], headers: Iterable[Header] = List()): Try[HttpResponse] = {
+    val httpPost = new HttpPost(url)
+    val multipartEntityBuilder = MultipartEntityBuilder.create()
+    data.foreach{ row => multipartEntityBuilder.addTextBody(row._1,row._2)}
+    val httpEntity = multipartEntityBuilder.build()
+    httpPost.setEntity(httpEntity)
+    this.headers.foreach(h => httpPost.addHeader(h._1, h._2))
+    doExecute(httpPost)
+  }
+
+
+  def doPut(url: String, body: Option[Array[Byte]], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPut = new HttpPut(url)
-    httpPut.setEntity(new ByteArrayEntity(body))
+    if(body.isDefined)
+        httpPut.setEntity(new ByteArrayEntity(body.get))
     this.headers.foreach(h => httpPut.addHeader(h._1, h._2))
     doExecute(httpPut)
   }
