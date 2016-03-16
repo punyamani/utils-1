@@ -49,10 +49,9 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
     doExecute(httpGet)
   }
 
-  def doPost(url: String, body: Option[Array[Byte]], headers: Iterable[Header] = List()): Try[HttpResponse] = {
+  def doPost(url: String, body: Array[Byte], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPost = new HttpPost(url)
-    if(body.isDefined)
-      httpPost.setEntity(new ByteArrayEntity(body.get))
+    httpPost.setEntity(new ByteArrayEntity(body))
     this.headers.foreach(h => httpPost.addHeader(h._1, h._2))
     headers.foreach(h => httpPost.addHeader(h._1, h._2))
     doExecute(httpPost)
@@ -76,10 +75,9 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
     doExecute(httpPost)
   }
 
-  def doPut(url: String, body: Option[Array[Byte]], headers: Iterable[Header] = List()): Try[HttpResponse] = {
+  def doPut(url: String, body: Array[Byte], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPut = new HttpPut(url)
-    if(body.isDefined)
-      httpPut.setEntity(new ByteArrayEntity(body.get))
+    httpPut.setEntity(new ByteArrayEntity(body))
     this.headers.foreach(h => httpPut.addHeader(h._1, h._2))
     headers.foreach(h => httpPut.addHeader(h._1, h._2))
     doExecute(httpPut)
