@@ -1,5 +1,6 @@
 package com.flipkart.utils.http
 
+import java.io.{InputStream, File}
 import java.util.concurrent.{Semaphore, TimeUnit}
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -13,17 +14,15 @@ import org.apache.http.HttpResponse
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods._
 import org.apache.http.entity.ByteArrayEntity
+import org.apache.http.entity.mime.MultipartEntityBuilder
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 
 import scala.reflect.{ClassTag, _}
 import scala.util.{Failure, Success, Try}
 
-/**
- * Created by kinshuk.bairagi on 11/02/16.
- */
-
-class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnections: Int, @NotNull processQueueSize: Int, @NotNull connectionTimeoutInMillis: Integer, @NotNull socketTimeoutInMillis: Integer) {
+class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnections: Int, @NotNull processQueueSize: Int,
+                 @NotNull connectionTimeoutInMillis: Integer, @NotNull socketTimeoutInMillis: Integer) {
 
   protected var headers: List[Header] = List()
   protected val processQueue = new Semaphore(processQueueSize + maxConnections)
@@ -50,16 +49,27 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
     doExecute(httpGet)
   }
 
-  def doDelete(url: String, headers: Iterable[Header] = List()): Try[HttpResponse] = {
-    val httpDelete = new HttpDelete(url)
-    headers.foreach(h => httpDelete.addHeader(h._1, h._2))
-    doExecute(httpDelete)
-  }
-
   def doPost(url: String, body: Array[Byte], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPost = new HttpPost(url)
     httpPost.setEntity(new ByteArrayEntity(body))
     headers.foreach(h => httpPost.addHeader(h._1, h._2))
+    doExecute(httpPost)
+  }
+
+  def doMultiPartPost(url: String, data : Map[String,Any], headers: Iterable[Header] = List()): Try[HttpResponse] = {
+    val httpPost = new HttpPost(url)
+    val multipartEntityBuilder = MultipartEntityBuilder.create()
+    data.foreach{ row => {
+      row._2  match {
+        case str : String => multipartEntityBuilder.addTextBody(row._1,str)
+        case file : File => multipartEntityBuilder.addBinaryBody(row._1,file)
+        case bytes : Array[Byte]  => multipartEntityBuilder.addBinaryBody(row._1,bytes)
+        case is : InputStream => multipartEntityBuilder.addBinaryBody(row._1,is)
+        case rest : _ => multipartEntityBuilder.addTextBody(row._1,rest.toString)
+      }
+    }}
+    val httpEntity = multipartEntityBuilder.build()
+    httpPost.setEntity(httpEntity)
     doExecute(httpPost)
   }
 
@@ -68,6 +78,12 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
     httpPut.setEntity(new ByteArrayEntity(body))
     headers.foreach(h => httpPut.addHeader(h._1, h._2))
     doExecute(httpPut)
+  }
+
+  def doDelete(url: String, headers: Iterable[Header] = List()): Try[HttpResponse] = {
+    val httpDelete = new HttpDelete(url)
+    headers.foreach(h => httpDelete.addHeader(h._1, h._2))
+    doExecute(httpDelete)
   }
 
   def doExecute(request: HttpRequestBase): Try[HttpResponse] = {
@@ -87,10 +103,7 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
       Failure(new Exception("PROCESS_QUEUE_FULL"))
     }
   }
-
-
 }
-
 
 object HttpClient {
 
@@ -107,7 +120,5 @@ object HttpClient {
     def getString(encoding: String = "UTF-8") = {
       IOUtils.toString(response.getEntity.getContent, encoding)
     }
-
   }
-
 }
