@@ -52,7 +52,6 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
   def doPost(url: String, body: Array[Byte], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPost = new HttpPost(url)
     httpPost.setEntity(new ByteArrayEntity(body))
-    this.headers.foreach(h => httpPost.addHeader(h._1, h._2))
     headers.foreach(h => httpPost.addHeader(h._1, h._2))
     doExecute(httpPost)
   }
@@ -71,14 +70,12 @@ class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnectio
     }}
     val httpEntity = multipartEntityBuilder.build()
     httpPost.setEntity(httpEntity)
-    this.headers.foreach(h => httpPost.addHeader(h._1, h._2))
     doExecute(httpPost)
   }
 
   def doPut(url: String, body: Array[Byte], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPut = new HttpPut(url)
     httpPut.setEntity(new ByteArrayEntity(body))
-    this.headers.foreach(h => httpPut.addHeader(h._1, h._2))
     headers.foreach(h => httpPut.addHeader(h._1, h._2))
     doExecute(httpPut)
   }
