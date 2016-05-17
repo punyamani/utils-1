@@ -1,6 +1,6 @@
 package com.flipkart.utils.http
 
-import java.io.{InputStream, File}
+import java.io.{File, InputStream}
 import java.util.concurrent.{Semaphore, TimeUnit}
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -8,11 +8,12 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.flipkart.utils.http.HttpClient.Header
 import com.flipkart.utils.http.metrics.MetricRegistry
-import com.sun.istack.internal.NotNull
+import com.flipkart.utils.http.models.HttpClientConfig
 import org.apache.commons.io.IOUtils
 import org.apache.http.HttpResponse
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods._
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory
 import org.apache.http.entity.ByteArrayEntity
 import org.apache.http.entity.mime.MultipartEntityBuilder
 import org.apache.http.impl.client.HttpClientBuilder
@@ -21,22 +22,35 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import scala.reflect.{ClassTag, _}
 import scala.util.{Failure, Success, Try}
 
-class HttpClient(name: String, @NotNull ttlInMillis: Long, @NotNull maxConnections: Int, @NotNull processQueueSize: Int,
-                 @NotNull connectionTimeoutInMillis: Integer, @NotNull socketTimeoutInMillis: Integer) {
+class HttpClient(httpClientConfig: HttpClientConfig) {
 
   protected var headers: List[Header] = List()
-  protected val processQueue = new Semaphore(processQueueSize + maxConnections)
+  protected val processQueue = new Semaphore(httpClientConfig.processQueueSize + httpClientConfig.maxConnections)
 
-  val connectionManager = new PoolingHttpClientConnectionManager(ttlInMillis, TimeUnit.MILLISECONDS)
-  connectionManager.setMaxTotal(maxConnections)
-  connectionManager.setDefaultMaxPerRoute(maxConnections)
+  val connectionManager = new PoolingHttpClientConnectionManager(httpClientConfig.ttlInMillis, TimeUnit.MILLISECONDS)
+  connectionManager.setMaxTotal(httpClientConfig.maxConnections)
+  connectionManager.setDefaultMaxPerRoute(httpClientConfig.maxConnections)
 
-  val httpParams = RequestConfig.custom().setConnectTimeout(connectionTimeoutInMillis).setSocketTimeout(socketTimeoutInMillis).build()
+  val httpParams = RequestConfig.custom().setConnectTimeout(httpClientConfig.connectionTimeoutInMillis)
+                                .setSocketTimeout(httpClientConfig.socketTimeoutInMillis).build()
 
-  protected val apacheHttpClient = HttpClientBuilder.create()
-    .setConnectionManager(connectionManager).setDefaultRequestConfig(httpParams).build()
+  protected val apacheHttpClient = httpClientConfig.sslConfig match {
+    case None =>
+      HttpClientBuilder.create()
+                       .setConnectionManager(connectionManager)
+                       .setDefaultRequestConfig(httpParams)
+                       .build()
+    case Some(sslConfig) =>
+      val sslSocketFactory = new SSLConnectionSocketFactory(sslConfig.sslContext, sslConfig.supportedProtocols,
+                                                            sslConfig.supportedCipherSuites, sslConfig.hostnameVerifier)
+      HttpClientBuilder.create()
+                       .setConnectionManager(connectionManager)
+                       .setDefaultRequestConfig(httpParams)
+                       .setSSLSocketFactory(sslSocketFactory)
+                       .build()
+  }
 
-  protected def metrics(suffix: String) = MetricRegistry.registry.timer(com.codahale.metrics.MetricRegistry.name(getClass, s"$name.$suffix"))
+  protected def metrics(suffix: String) = MetricRegistry.registry.timer(com.codahale.metrics.MetricRegistry.name(getClass, s"${httpClientConfig.name}.$suffix"))
 
   def setDefaultHeaders(headers: Iterable[Header]): HttpClient = {
     this.headers = headers.toList
