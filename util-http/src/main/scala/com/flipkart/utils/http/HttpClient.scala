@@ -29,17 +29,17 @@ class HttpClient(httpClientConfig: HttpClientConfig) {
   protected var headers: List[Header] = List()
   protected val processQueue = new Semaphore(httpClientConfig.processQueueSize + httpClientConfig.maxConnections)
 
-  val defaultConnectionManager = new PoolingHttpClientConnectionManager(httpClientConfig.ttlInMillis, TimeUnit.MILLISECONDS)
-  defaultConnectionManager.setMaxTotal(httpClientConfig.maxConnections)
-  defaultConnectionManager.setDefaultMaxPerRoute(httpClientConfig.maxConnections)
-
   val httpParams = RequestConfig.custom().setConnectTimeout(httpClientConfig.connectionTimeoutInMillis)
                                 .setSocketTimeout(httpClientConfig.socketTimeoutInMillis).build()
 
   protected val apacheHttpClient = httpClientConfig.sslConfig match {
     case None =>
+      val connectionManager = new PoolingHttpClientConnectionManager(httpClientConfig.ttlInMillis, TimeUnit.MILLISECONDS)
+      connectionManager.setMaxTotal(httpClientConfig.maxConnections)
+      connectionManager.setDefaultMaxPerRoute(httpClientConfig.maxConnections)
+
       HttpClientBuilder.create()
-                       .setConnectionManager(defaultConnectionManager)
+                       .setConnectionManager(connectionManager)
                        .setDefaultRequestConfig(httpParams)
                        .build()
     case Some(sslConfig) =>
