@@ -13,6 +13,8 @@ import org.apache.commons.io.IOUtils
 import org.apache.http.HttpResponse
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods._
+import org.apache.http.config.RegistryBuilder
+import org.apache.http.conn.socket.{ConnectionSocketFactory, PlainConnectionSocketFactory}
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory
 import org.apache.http.entity.ByteArrayEntity
 import org.apache.http.entity.mime.MultipartEntityBuilder
@@ -27,9 +29,9 @@ class HttpClient(httpClientConfig: HttpClientConfig) {
   protected var headers: List[Header] = List()
   protected val processQueue = new Semaphore(httpClientConfig.processQueueSize + httpClientConfig.maxConnections)
 
-  val connectionManager = new PoolingHttpClientConnectionManager(httpClientConfig.ttlInMillis, TimeUnit.MILLISECONDS)
-  connectionManager.setMaxTotal(httpClientConfig.maxConnections)
-  connectionManager.setDefaultMaxPerRoute(httpClientConfig.maxConnections)
+  val defaultConnectionManager = new PoolingHttpClientConnectionManager(httpClientConfig.ttlInMillis, TimeUnit.MILLISECONDS)
+  defaultConnectionManager.setMaxTotal(httpClientConfig.maxConnections)
+  defaultConnectionManager.setDefaultMaxPerRoute(httpClientConfig.maxConnections)
 
   val httpParams = RequestConfig.custom().setConnectTimeout(httpClientConfig.connectionTimeoutInMillis)
                                 .setSocketTimeout(httpClientConfig.socketTimeoutInMillis).build()
@@ -37,12 +39,23 @@ class HttpClient(httpClientConfig: HttpClientConfig) {
   protected val apacheHttpClient = httpClientConfig.sslConfig match {
     case None =>
       HttpClientBuilder.create()
-                       .setConnectionManager(connectionManager)
+                       .setConnectionManager(defaultConnectionManager)
                        .setDefaultRequestConfig(httpParams)
                        .build()
     case Some(sslConfig) =>
       val sslSocketFactory = new SSLConnectionSocketFactory(sslConfig.sslContext, sslConfig.supportedProtocols,
                                                             sslConfig.supportedCipherSuites, sslConfig.hostnameVerifier)
+      val socketFactoryRegistry = RegistryBuilder.create[ConnectionSocketFactory]()
+                                                 .register("http", PlainConnectionSocketFactory.getSocketFactory())
+                                                 .register("https", sslSocketFactory)
+                                                 .build()
+      val connectionManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry,
+                                                                     httpClientConfig.connectionFactory,
+                                                                     httpClientConfig.schemePortResolver,
+                                                                     httpClientConfig.dnsResolver,
+                                                                     httpClientConfig.ttlInMillis, TimeUnit.MILLISECONDS)
+      connectionManager.setMaxTotal(httpClientConfig.maxConnections)
+      connectionManager.setDefaultMaxPerRoute(httpClientConfig.maxConnections)
       HttpClientBuilder.create()
                        .setConnectionManager(connectionManager)
                        .setDefaultRequestConfig(httpParams)
