@@ -49,10 +49,7 @@ class HttpClient(httpClientConfig: HttpClientConfig) {
                                                  .register("http", PlainConnectionSocketFactory.getSocketFactory())
                                                  .register("https", sslSocketFactory)
                                                  .build()
-      val connectionManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry,
-                                                                     httpClientConfig.connectionFactory,
-                                                                     httpClientConfig.schemePortResolver,
-                                                                     httpClientConfig.dnsResolver,
+      val connectionManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry, null, null, null,
                                                                      httpClientConfig.ttlInMillis, TimeUnit.MILLISECONDS)
       connectionManager.setMaxTotal(httpClientConfig.maxConnections)
       connectionManager.setDefaultMaxPerRoute(httpClientConfig.maxConnections)
