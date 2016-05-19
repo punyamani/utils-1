@@ -49,6 +49,11 @@ class HttpClient(httpClientConfig: HttpClientConfig) {
                                                  .register("http", PlainConnectionSocketFactory.getSocketFactory())
                                                  .register("https", sslSocketFactory)
                                                  .build()
+      /*
+       * Enhancement: Currently we use default values for connectionFactory, socketResolver & dnsResolver.
+       * But if we want to have custom values for the,then they would have to be accepted as parameters from the client
+       * and then used here.
+       */
       val connectionManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry, null, null, null,
                                                                      httpClientConfig.ttlInMillis, TimeUnit.MILLISECONDS)
       connectionManager.setMaxTotal(httpClientConfig.maxConnections)
