@@ -16,8 +16,9 @@ import org.apache.http.client.methods._
 import org.apache.http.config.RegistryBuilder
 import org.apache.http.conn.socket.{ConnectionSocketFactory, PlainConnectionSocketFactory}
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory
-import org.apache.http.entity.ByteArrayEntity
 import org.apache.http.entity.mime.MultipartEntityBuilder
+import org.apache.http.entity.mime.content.{StringBody, FileBody, ByteArrayBody, InputStreamBody}
+import org.apache.http.entity.{ByteArrayEntity, ContentType}
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 
@@ -28,6 +29,10 @@ class HttpClient(httpClientConfig: HttpClientConfig) {
 
   protected var headers: List[Header] = List()
   protected val processQueue = new Semaphore(httpClientConfig.processQueueSize + httpClientConfig.maxConnections)
+
+  val CONTENT_TYPE_MULTIPART_FIELD:String = "contentType"
+  val DATA_MULTIPART_FIELD:String = "data"
+  val FILENAME_MULTIPART_FIELD = "fileName"
 
   val httpParams = RequestConfig.custom().setConnectTimeout(httpClientConfig.connectionTimeoutInMillis)
                                 .setSocketTimeout(httpClientConfig.socketTimeoutInMillis).build()
@@ -43,8 +48,16 @@ class HttpClient(httpClientConfig: HttpClientConfig) {
                        .setDefaultRequestConfig(httpParams)
                        .build()
     case Some(sslConfig) =>
-      val sslSocketFactory = new SSLConnectionSocketFactory(sslConfig.sslContext, sslConfig.supportedProtocols,
-                                                            sslConfig.supportedCipherSuites, sslConfig.hostnameVerifier)
+      val supportedProtocols = sslConfig.supportedProtocols match {
+        case Some(protocols) => protocols
+        case None => null
+      }
+      val supportedCipherSuites = sslConfig.supportedCipherSuites match {
+        case Some(protocols) => protocols
+        case None => null
+      }
+      val sslSocketFactory = new SSLConnectionSocketFactory(sslConfig.sslContext, supportedProtocols,
+                                                            supportedCipherSuites, sslConfig.hostnameVerifier)
       val socketFactoryRegistry = RegistryBuilder.create[ConnectionSocketFactory]()
                                                  .register("http", PlainConnectionSocketFactory.getSocketFactory())
                                                  .register("https", sslSocketFactory)
@@ -85,15 +98,18 @@ class HttpClient(httpClientConfig: HttpClientConfig) {
     doExecute(httpPost)
   }
 
-  def doMultiPartPost(url: String, data : Map[String,Any], headers: Iterable[Header] = List()): Try[HttpResponse] = {
+  def doMultiPartPost(url: String, data : Map[String,Map[String,Any]], headers: Iterable[Header] = List()): Try[HttpResponse] = {
     val httpPost = new HttpPost(url)
     val multipartEntityBuilder = MultipartEntityBuilder.create()
     data.foreach{ row => {
-      row._2  match {
-        case str : String => multipartEntityBuilder.addTextBody(row._1,str)
-        case file : File => multipartEntityBuilder.addBinaryBody(row._1,file)
-        case bytes : Array[Byte]  => multipartEntityBuilder.addBinaryBody(row._1,bytes)
-        case is : InputStream => multipartEntityBuilder.addBinaryBody(row._1,is)
+      val contentType = row._2(CONTENT_TYPE_MULTIPART_FIELD).asInstanceOf[ContentType]
+      row._2(DATA_MULTIPART_FIELD)  match {
+        case str : String => multipartEntityBuilder.addPart(row._1,new StringBody(str,contentType))
+        case file : File => multipartEntityBuilder.addPart(row._1,new FileBody(file,contentType))
+        case bytes : Array[Byte]  => multipartEntityBuilder.addPart(row._1,
+                                              new ByteArrayBody(bytes,contentType,
+                                                                row._2(FILENAME_MULTIPART_FIELD).asInstanceOf[String]))
+        case is : InputStream => multipartEntityBuilder.addPart(row._1,new InputStreamBody(is,contentType))
       }
     }}
     val httpEntity = multipartEntityBuilder.build()
