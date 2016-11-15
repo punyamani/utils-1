@@ -69,14 +69,7 @@ object Utils extends Build {
             <name>Flipkart Internet Pvt. Ltd.</name>
             <url>https://www.flipkart.com/</url>
           </developer>
-        </developers>,
-    publishTo <<= version { (v: String) =>
-      val flipkart = "http://artifactory.nm.flipkart.com:8081/artifactory/"
-      if (v.trim.endsWith("SNAPSHOT"))
-        Some("Flipkart Repo Snapshots" at flipkart + "libs-snapshot-local")
-      else
-        Some("Flipkart Repo Releases" at flipkart + "libs-release-local")
-    }
+        </developers>
   )
 
 
